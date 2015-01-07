@@ -1,0 +1,1 @@
+INSERT INTO dichred_client.rsets_scopes SELECT rs.scope_uri, rs.rset_id, ass.rset_name, ass.rset_uri, sco.name FROM comune_rs.rset_scope as rs, authserver_zf.resource_set_registration as ass, comune_rs.scope as sco where rs.rset_id = ass.rset_id AND rs.scope_uri = sco.uri

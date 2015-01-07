@@ -4,7 +4,7 @@ class Bootstrap extends Zend_Application_Bootstrap_Bootstrap {
 
 	protected function _initLogging()
 	{
-		$log = new Zend_Log(new Zend_Log_Writer_Stream('/tmp/mod730-RS-at.log'));
+		$log = new Zend_Log(new Zend_Log_Writer_Stream(APPLICATION_PATH . DIRECTORY_SEPARATOR . 'tmp' . DIRECTORY_SEPARATOR . 'mod730-RS-at.log'));
 		Zend_Registry::set('log',$log);
 	}
 

@@ -2,14 +2,14 @@
 
 class Comune_Bootstrap extends Zend_Application_Module_Bootstrap {
 	const DB_NAME = 'comune';
-	
+
 	protected function _initDB() {
-		$conf = new Zend_Config_Ini(dirname(__FILE__).'/configs/config.ini');
+		$conf = new Zend_Config_Ini(dirname(__FILE__).'\configs\config.ini');
 		$db = Zend_Db::factory($conf->resources->db);
 		Zend_Registry::set(self::DB_NAME, $db);
 	}
-	
-	
+
+
 	/**
 	 * Adds factories and  mappers as resource type, enabling it auto-loading
 	 */

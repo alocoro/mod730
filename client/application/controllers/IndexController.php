@@ -1,5 +1,6 @@
 <?php
 
+require_once(APPLICATION_PATH . DIRECTORY_SEPARATOR . 'forms' . DIRECTORY_SEPARATOR . 'RSetDemoForm.php');
 
 
 class IndexController extends Zend_Controller_Action
@@ -12,7 +13,7 @@ class IndexController extends Zend_Controller_Action
      * @var Application_Model_ClientInfo
      *
      */
-    private $client_info = null;
+    private $client_info;
 
     /**
      * @var Oauth2_Model_Interact
@@ -32,8 +33,12 @@ class IndexController extends Zend_Controller_Action
     	//'/etc/apache2/ssl/cert.crt' for the dione host
 //    	$this->oauth2 = new Oauth2_Model_Interact('/etc/apache2/ssl/cert.crt');
 	// G. Ciaccio: now the constructor uses the CA certificates directory.
-    	$this->oauth2 = new Oauth2_Model_Interact('/etc/ssl/certs');
-    	
+    	//$this->oauth2 = new Oauth2_Model_Interact('/etc/ssl/certs');
+    	//A.Locoro
+    	$this->oauth2 = new Oauth2_Model_Interact('C:\Users\Angela\oauth-certs');
+
+
+
         $ajaxContext = $this->_helper->getHelper('AjaxContext');
         $ajaxContext->addActionContext('ajax', 'html')
         			->initContext();
@@ -65,7 +70,7 @@ class IndexController extends Zend_Controller_Action
     	$ns = $this->getSessionVariable();
     	$ns->form_data = $form_data;
     }
-    
+
     private function getFormData() {
     	$ns = $this->getSessionVariable();
     	return $ns->form_data;
@@ -90,7 +95,7 @@ class IndexController extends Zend_Controller_Action
 
     public function indexAction() {
 //     	$pdf = Zend_Pdf::load('new.pdf');
-    	
+
 //     	$pdf->setChField('sesso', 'F');
 // //     	$pdf->setTextField('sesso', 'F');
 //     	$this->_helper->layout->disableLayout();
@@ -103,16 +108,21 @@ class IndexController extends Zend_Controller_Action
     	$this->view->options_form = new Application_Form_StartForm($this->client_info->getSopes());
     }
 
+
+	public function demorsetsAction() {
+	    $this->view->options_form = new Application_Form_DemoForm($this->client_info->getRSets_Scopes());
+    }
+
     public function getAction()
     {
     	$options_form = new Application_Form_StartForm($this->client_info->getSopes());
     	$req = $this->getRequest();
-    	
+
     	if (!$req->isPost() || !$options_form->isValid($this->getRequest()->getPost())) {
     		$this->view->options_form = $options_form;
     		$this->_helper->redirector('index');
     	}
-    	
+
     	if ($options_form->getValue(Application_Form_StartForm::SUBMIT_BUTTON_ID)) {
     		$selected_scopes = $options_form->getValue(Application_Form_StartForm::SCOPES);
     		if (empty($selected_scopes)) {
@@ -122,7 +132,7 @@ class IndexController extends Zend_Controller_Action
     		}
     		$state = "";
     		try {
-	    		$this->oauth2->getAuthCode($this, $this->client_info->getAsAuthEndpoint(), 
+	    		$this->oauth2->getAuthCode($this, $this->client_info->getAsAuthEndpoint(),
 	    								$this->client_info->getId(),
 	    								$this->client_info->getRedirectEndpoint(),
 	    								$selected_scopes, $state);
@@ -135,13 +145,49 @@ class IndexController extends Zend_Controller_Action
     		$this->_helper->redirector('index');
     }
 
+
+		public function getdemoAction()
+	    {
+	    	$options_form = new Application_Form_DemoForm($this->client_info->getRSets_Scopes());
+	    	$req = $this->getRequest();
+
+	    	if (!$req->isPost() || !$options_form->isValid($this->getRequest()->getPost())) {
+	    		$this->view->options_form = $options_form;
+	    		$this->_helper->redirector('demorsets');
+	    	}
+
+	    	if ($options_form->getValue(Application_Form_DemoForm::SUBMIT_BUTTON_ID)) {
+	    		$selected_rsets_scopes = $options_form->getValue(Application_Form_DemoForm::SCOPES);
+	    		var_dump($selected_rsets_scopes);
+	    		if (empty($selected_rsets_scopes)) {
+	    			$options_form->setDescription('Bisogna scegliere almeno una voce. Riprovare.');
+	    			$this->view->options_form = $options_form;
+	    			return $this->render('demorsets');
+	    		}
+	    		$state = "";
+	    		try {
+		    		$this->oauth2->getAuthCodeDemo($this, $this->client_info->getAsAuthEndpoint(),
+		    								$this->client_info->getId(),
+		    								$this->client_info->getRedirectEndpoint(),
+		    								$selected_rsets_scopes, $state);
+	    		} catch (InvalidArgumentException $e) {
+	    			$options_form->setDescription('errore 1: '.$e->getMessage().'.');
+	    			$this->view->options_form = $options_form;
+	    			return $this->render('demorsets');
+	    		}
+	    	} else
+	    		$this->_helper->redirector('demorsets');
+    }
+
+
+
     public function processAction()
     {
     	$request = $this->getRequest();
-    	
+
     	$state = Oauth2_Model_Interact::getState($request);
     	//use the state if it is not null
-    	
+
     	try {
     		//TODO remove this comment
     		$auth_code = Oauth2_Model_Interact::getAuthCodeResponse($request);
@@ -164,10 +210,10 @@ class IndexController extends Zend_Controller_Action
     		$this->view->error = 'errore 2: '.$e->getMessage().'.';
     		return;
     	}
-    	
+
     	//save the code.. if there is the need
 //     	$this->saveAuthCode($auth_code);
-    	
+
     	try {
     		$access_token = Oauth2_Model_Interact::getAccessToken(
 				$this->client_info->getAsTokenEndpoint(),
@@ -187,19 +233,19 @@ class IndexController extends Zend_Controller_Action
     		$this->view->error = 'errore 3: '.$e->getMessage().'.';
     		return;
     	}
-    	
+
     	$this->saveAccessToken($access_token);
-    	
+
     	$this->view->message = 'Autorizzazioni concesse...';
     }
 
-   
+
     public function fillAction() {
     	if (!$this->getAccessToken()) {
     		$this->view->no_token = true;
     		return;
     	}
-    	
+
     	//richiesta dei dati...
     	try {
     		$received_data = Oauth2_Model_Interact::getAllData($this->getAccessToken());
@@ -207,43 +253,45 @@ class IndexController extends Zend_Controller_Action
     		$this->view->error_message = $e->getDescription();
     		return;
     	}
-    	   	
+
     	$this->view->access_errors = array();
     	foreach ($received_data->getErrors() as $e) {
     		$scopes = Oauth2_Model_ReceivedData::getScopes($e);
     		$error_descr = Oauth2_Model_ReceivedData::getDescription($e);
-    		
+
     		$scope_descr = array();
     		foreach ($scopes as $scope_id)
     			$scope_descr[] = $this->client_info->getScopeDescription($scope_id);
-    		
+
     		/*
-    		 * to retrieve from view by accessing on each element the 
-    		 * array[0] the description of the error, the array[1] 
+    		 * to retrieve from view by accessing on each element the
+    		 * array[0] the description of the error, the array[1]
     		 * the array of scope descriptions.
     		 */
     		$this->view->access_errors[] = array($error_descr,$scope_descr);
     	}
     	//use user data to fill in the annual income declaration
-//     	var_dump($received_data);
+     	//var_dump($received_data);
     	$user_data = new Application_Model_UserData($received_data->getData());
     	$this->view->form_data = new Application_Model_FormData($user_data);
     	$this->saveFormData($this->view->form_data);
+
+
 //     	var_dump($user_data->agenziaentrate);
     }
-    
+
     public function ajaxAction() {
 //     	$this->_helper->layout()->disableLayout();
-    	
+
     	$this->view->richiesta = $this->getRequest()->getParam('richiesta', '');
-    	
+
     	switch ($this->view->richiesta) {
     		case 'spese_mediche':
     			$form_data = $this->getFormData();
     			if (!$form_data)
     				return 'No data';
     			$this->view->spese_mediche = $form_data->speseMediche();
-    			break;    			
+    			break;
     	}
     }
 }
